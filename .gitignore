@@ -1,3 +1,9 @@
+# Virtual environment
+vanta/
+venv/
+.venv/
+env/
+
 # State files (generated per run)
 recon_state.json
 hypotheses.json
@@ -24,12 +30,9 @@ __pycache__/
 .eggs/
 dist/
 build/
-venv/
-.venv/
-env/
 *.egg
 
-# Ollama / model weights (too large for git)
+# Ollama / model weights
 models/
 *.gguf
 *.bin
@@ -44,7 +47,7 @@ docker-compose.override.yml
 *.gnmap
 *.nmap
 
-# Exploit tools and payloads (never commit these)
+# Exploit tools and payloads
 payloads/
 exploits/local/
 msf_sessions/
