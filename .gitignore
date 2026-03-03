@@ -1,0 +1,62 @@
+# State files (generated per run)
+recon_state.json
+hypotheses.json
+exploit_results.json
+remediations.json
+benchmark_results.json
+
+# Topology and report outputs
+topology.png
+*.png
+*.pdf
+reports/
+
+# Environment and secrets
+.env
+*.key
+*.pem
+*.p12
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+venv/
+.venv/
+env/
+*.egg
+
+# Ollama / model weights (too large for git)
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# Docker artifacts
+.docker/
+docker-compose.override.yml
+
+# nmap raw output
+*.xml
+*.gnmap
+*.nmap
+
+# Exploit tools and payloads (never commit these)
+payloads/
+exploits/local/
+msf_sessions/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+agent_state/
