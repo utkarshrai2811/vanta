@@ -40,19 +40,41 @@ Each phase outputs a JSON state file consumed by the next. Runs fully unattended
 ### Requirements
 
 - Linux (Ubuntu 20.04+)
-- nmap: sudo apt install nmap
-- Python 3.9+
-- Root/sudo for OS fingerprinting
+- nmap binary: sudo apt install nmap
+- Python 3.12+
+- Root/sudo for OS fingerprinting (-O flag)
 
 ### Install
 
+    python3 -m venv vanta
+    source vanta/bin/activate
     pip install -r requirements.txt
+
+### Running with sudo inside a venv
+
+sudo does not inherit your venv environment. Running sudo python3 recon.py
+will fail with ModuleNotFoundError even after pip install. Always pass the
+full path to the venv interpreter:
+
+    # While venv is active, find your interpreter path
+    which python3
+
+    # Then run with sudo using that full path
+    sudo /home/kaneki/vanta/vanta/bin/python3 recon.py
+
+    # Shorthand that works when venv is active
+    sudo $(which python3) recon.py
 
 ### Usage
 
-    sudo python3 recon.py
-    sudo python3 recon.py --target 192.168.1.0/24 --mode deep
-    sudo python3 recon.py --no-map
+    # Single host - scan a VPS scanning itself
+    sudo $(which python3) recon.py --target $(hostname -I | awk '{print $1}')/32 --mode deep
+
+    # Full subnet
+    sudo $(which python3) recon.py --target 192.168.1.0/24 --mode standard
+
+    # Skip topology image
+    sudo $(which python3) recon.py --no-map
 
 ### Flags
 
