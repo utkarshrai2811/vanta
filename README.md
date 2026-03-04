@@ -20,7 +20,7 @@ Each phase outputs a JSON state file consumed by the next. Runs fully unattended
 |---|--------|-------------|--------|
 | 1 | recon.py | Network scan, OS fingerprinting, topology map | Done |
 | 2 | hypothesis_engine.py | LLM-powered attack hypotheses ranked by MITRE TTPs | Done |
-| 3 | exploit_runner.py | Sandboxed exploit validation via Docker | Upcoming |
+| 3 | exploit_runner.py | Sandboxed exploit validation via Docker | Done |
 | 4 | remediation_engine.py | Auto-draft remediations and markdown report | Upcoming |
 | 5 | agent.py | Orchestrator, state machine, full agentic loop | Upcoming |
 | 6 | llm_provider.py | Local LLM swap (Ollama) and Jetson optimization | Upcoming |
@@ -150,6 +150,68 @@ full path to the venv interpreter:
 - hypotheses.json is gitignored — it contains recon data about real targets
 - prompts.py holds the system prompt and host prompt builder separately so Phase 5 can swap them
 - Cost per run is typically under $0.01 with Haiku
+
+---
+
+## Phase 3: Sandboxed Exploit Validation
+
+### What it does
+
+- Takes hypotheses.json from Phase 2
+- Maps each hypothesis to a validator based on MITRE technique ID
+- Runs each validator in an isolated Docker container (auto-destroyed after timeout)
+- Captures stdout, stderr, exit codes and interprets results into confirmed/partial/negative/error
+- Writes exploit_results.json with findings and evidence for Phase 4
+
+### Validator mapping
+
+| Technique prefix | Validator | What it checks |
+|-----------------|-----------|----------------|
+| T1110 | credential_check | SSH reachability and password auth availability |
+| T1021, T1557 | ssh_algo_enum | Weak key exchange / cipher algorithms via KEXINIT |
+| T1552, T1195 | osint_key_check | Generates manual OSINT checklist for leaked keys |
+| T1548 | version_cve_check | Banner grab + static CVE lookup by version |
+| T1036 | honeypot_detect | Response timing + garbage probe + banner inconsistency |
+| default | banner_grab | Generic port reachability and banner capture |
+
+### Requirements
+
+- Docker installed and running: sudo apt install docker.io
+- Add your user to the docker group: sudo usermod -aG docker $USER && newgrp docker
+- Phase 2 must have been run first (hypotheses.json must exist)
+
+### Usage
+
+    # Dry run — shows what would be tested, does nothing
+    python3 exploit_runner.py
+
+    # Run top 3 hypotheses (default)
+    python3 exploit_runner.py --confirm
+
+    # Run top 5 with longer timeout
+    python3 exploit_runner.py --confirm --top 5 --timeout 45
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| --input / -i | hypotheses.json path | hypotheses.json |
+| --output / -o | results output path | exploit_results.json |
+| --top / -n | number of hypotheses to test | 3 |
+| --timeout / -t | container timeout in seconds | 30 |
+| --confirm | required safety flag to actually run | off |
+
+### Outputs
+
+- exploit_results.json: full results with evidence passed to Phase 4
+- Terminal table: confirmed / partial / negative / error per hypothesis
+
+### Safety limits
+
+- Containers run with --cap-drop ALL and no-new-privileges
+- Memory capped at 128MB, CPU at 50% of one core
+- No destructive payloads — validators are read-only probes
+- exploit_results.json is gitignored (contains target recon data)
 
 ---
 
