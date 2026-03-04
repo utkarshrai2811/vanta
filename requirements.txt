@@ -2,3 +2,5 @@ python-nmap>=0.7.1
 networkx>=3.3
 matplotlib>=3.8.0
 rich>=13.7.1
+anthropic>=0.40.0
+docker>=7.0.0

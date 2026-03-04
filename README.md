@@ -19,7 +19,7 @@ Each phase outputs a JSON state file consumed by the next. Runs fully unattended
 | # | Module | Description | Status |
 |---|--------|-------------|--------|
 | 1 | recon.py | Network scan, OS fingerprinting, topology map | Done |
-| 2 | hypothesis_engine.py | LLM-powered attack hypotheses ranked by MITRE TTPs | Upcoming |
+| 2 | hypothesis_engine.py | LLM-powered attack hypotheses ranked by MITRE TTPs | Done |
 | 3 | exploit_runner.py | Sandboxed exploit validation via Docker | Upcoming |
 | 4 | remediation_engine.py | Auto-draft remediations and markdown report | Upcoming |
 | 5 | agent.py | Orchestrator, state machine, full agentic loop | Upcoming |
@@ -98,6 +98,58 @@ full path to the venv interpreter:
 | Red | SMB 445, RDP 3389, Telnet 23, VNC 5900, Redis 6379, MongoDB 27017, MySQL 3306 |
 | Yellow | SSH 22, HTTP 80, SMTP 25, IMAP 143, HTTP-Alt 8080 |
 | Green | No flagged ports |
+
+---
+
+## Phase 2: Attack Hypothesis Engine
+
+### What it does
+
+- Reads recon_state.json from Phase 1
+- Sends each host and its services to Claude (Haiku) for reasoning
+- Returns ranked attack hypotheses with MITRE ATT&CK IDs, confidence scores, severity, and exploit suggestions
+- Scores each hypothesis by severity x confidence and sorts into a priority queue
+- Outputs a clean terminal table and saves full detail to hypotheses.json
+
+### Requirements
+
+- ANTHROPIC_API_KEY set in your .env file
+- Phase 1 must have been run first (recon_state.json must exist)
+
+### Setup
+
+    cp .env.example .env
+    # add your Anthropic API key to .env
+
+### Usage
+
+    export $(cat .env) && python3 hypothesis_engine.py
+
+    # Custom input/output paths
+    python3 hypothesis_engine.py --input recon_state.json --output hypotheses.json
+
+    # Use a different model
+    python3 hypothesis_engine.py --model claude-opus-4-6
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| --input / -i | recon_state.json path | recon_state.json |
+| --output / -o | hypotheses output path | hypotheses.json |
+| --model / -m | Claude model to use | claude-haiku-4-5-20251001 |
+| --api-key | Anthropic API key | ANTHROPIC_API_KEY env var |
+
+### Outputs
+
+- hypotheses.json: full ranked hypothesis data passed to Phase 3
+- Terminal table: priority queue ranked by severity x confidence score
+
+### Notes
+
+- hypotheses.json is gitignored — it contains recon data about real targets
+- prompts.py holds the system prompt and host prompt builder separately so Phase 5 can swap them
+- Cost per run is typically under $0.01 with Haiku
 
 ---
 
