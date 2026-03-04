@@ -21,7 +21,7 @@ Each phase outputs a JSON state file consumed by the next. Runs fully unattended
 | 1 | recon.py | Network scan, OS fingerprinting, topology map | Done |
 | 2 | hypothesis_engine.py | LLM-powered attack hypotheses ranked by MITRE TTPs | Done |
 | 3 | exploit_runner.py | Sandboxed exploit validation via Docker | Done |
-| 4 | remediation_engine.py | Auto-draft remediations and markdown report | Upcoming |
+| 4 | remediation_engine.py | Auto-draft remediations and markdown report | Done |
 | 5 | agent.py | Orchestrator, state machine, full agentic loop | Upcoming |
 | 6 | llm_provider.py | Local LLM swap (Ollama) and Jetson optimization | Upcoming |
 
@@ -212,6 +212,55 @@ full path to the venv interpreter:
 - Memory capped at 128MB, CPU at 50% of one core
 - No destructive payloads — validators are read-only probes
 - exploit_results.json is gitignored (contains target recon data)
+
+---
+
+## Phase 4: Remediation Engine
+
+### What it does
+
+- Takes exploit_results.json from Phase 3
+- Calls Claude Sonnet per finding to generate actionable remediations
+- Each remediation includes: risk summary, numbered steps, exact config diffs, CVE references, patch confidence score, verification command, and estimated fix time
+- Processes all findings (confirmed, partial, negative) — negative findings get hardening guidance
+- Outputs remediations.json and a human-readable markdown report
+
+### Requirements
+
+- ANTHROPIC_API_KEY set in .env
+- Phase 3 must have been run first (exploit_results.json must exist)
+
+### Usage
+
+    export $(cat .env) && python3 remediation_engine.py
+
+    # Skip negative findings, only remediate confirmed and partial
+    python3 remediation_engine.py --skip-negative
+
+    # Custom paths and model
+    python3 remediation_engine.py --input exploit_results.json --output remediations.json --report report.md
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| --input / -i | exploit_results.json path | exploit_results.json |
+| --output / -o | remediations output path | remediations.json |
+| --report / -r | markdown report output path | report.md |
+| --model / -m | Claude model to use | claude-sonnet-4-6 |
+| --skip-negative | skip negative findings | off |
+| --api-key | Anthropic API key | ANTHROPIC_API_KEY env var |
+
+### Outputs
+
+- remediations.json: full remediation data passed to Phase 5 (gitignored)
+- report.md: human-readable markdown report (gitignored — contains target data)
+- sample_report.md: committed example report generated from real VPS findings
+
+### Cost
+
+Sonnet is used for higher quality remediations. Expect $0.05–0.10 per run for 5 findings.
+Haiku can be substituted with --model claude-haiku-4-5-20251001 to cut costs ~10x.
 
 ---
 

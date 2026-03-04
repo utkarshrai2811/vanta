@@ -16,6 +16,8 @@ topology.png
 *.png
 *.pdf
 reports/
+report.md
+remediations.json
 
 # Environment and secrets
 .env
