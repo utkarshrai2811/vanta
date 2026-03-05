@@ -10,6 +10,7 @@ hypotheses.json
 exploit_results.json
 remediations.json
 benchmark_results.json
+verify_state.json
 
 # Topology and report outputs
 topology.png

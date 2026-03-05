@@ -22,7 +22,7 @@ Each phase outputs a JSON state file consumed by the next. Runs fully unattended
 | 2 | hypothesis_engine.py | LLM-powered attack hypotheses ranked by MITRE TTPs | Done |
 | 3 | exploit_runner.py | Sandboxed exploit validation via Docker | Done |
 | 4 | remediation_engine.py | Auto-draft remediations and markdown report | Done |
-| 5 | agent.py | Orchestrator, state machine, full agentic loop | Upcoming |
+| 5 | agent.py | Orchestrator, state machine, full agentic loop | Done |
 | 6 | llm_provider.py | Local LLM swap (Ollama) and Jetson optimization | Upcoming |
 
 ---
@@ -261,6 +261,82 @@ full path to the venv interpreter:
 
 Sonnet is used for higher quality remediations. Expect $0.05–0.10 per run for 5 findings.
 Haiku can be substituted with --model claude-haiku-4-5-20251001 to cut costs ~10x.
+
+---
+
+## Phase 5: Agent Orchestrator
+
+### What it does
+
+- Single entry point that runs the full pipeline: recon -> hypothesize -> exploit -> remediate -> verify
+- After remediation, re-runs a quick recon and compares against baseline to measure attack surface reduction
+- Persists state to agent_state/ so every run is auditable and resumable
+- Supports full-auto, semi-auto, and recon-only modes
+- Live dashboard showing phase progress, findings counts, and severity breakdown
+
+### Usage
+
+    # Semi-auto (default) — pauses for approval between phases
+    python3 agent.py
+
+    # Full auto — runs entire pipeline unattended
+    python3 agent.py --mode full-auto
+
+    # Recon only
+    python3 agent.py --mode recon-only
+
+    # Resume last incomplete run
+    python3 agent.py --resume
+
+    # List all previous runs
+    python3 agent.py --list-runs
+
+    # Target a specific subnet
+    python3 agent.py --mode full-auto --target 192.168.1.0/24 --scan-mode deep
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| --mode | full-auto / semi-auto / recon-only | semi-auto |
+| --target / -t | target subnet or IP | auto-detected |
+| --scan-mode | quick / standard / deep | standard |
+| --top-n | hypotheses to exploit in Phase 3 | 3 |
+| --timeout | container timeout for Phase 3 (seconds) | 30 |
+| --hypothesis-model | Claude model for Phase 2 | claude-haiku-4-5-20251001 |
+| --remediation-model | Claude model for Phase 4 | claude-sonnet-4-6 |
+| --resume | resume last incomplete run | off |
+| --run-id | resume a specific run by ID | - |
+| --list-runs | list all previous runs and exit | off |
+
+### Outputs
+
+- agent_state/<run_id>.json: full run state (gitignored)
+- recon_state.json, hypotheses.json, exploit_results.json, remediations.json, report.md
+- verify_state.json: post-remediation recon for comparison
+
+### State machine phases
+
+    INIT -> RECON -> HYPOTHESIZE -> EXPLOIT -> REMEDIATE -> VERIFY -> COMPLETE
+
+If any phase fails, agent prompts to continue or abort. On --resume, completed phases are skipped automatically.
+
+### Verified run output (2026-03-05)
+
+Full pipeline against DigitalOcean VPS (single host, SSH-only exposure):
+
+| Phase | Duration | Key output |
+|-------|----------|------------|
+| recon | 14s | 1 host, 1 port |
+| hypothesize | 17s | 7 hypotheses (2 critical, 2 high, 2 medium, 1 low) |
+| exploit | 3s | 3 partial, 0 confirmed — hardened box |
+| remediate | 69s | 3 remediations, avg patch confidence 79% |
+| verify | 2s | 0 ports closed (expected — remediations are drafts) |
+
+**Total runtime: ~1m 48s**
+
+Attack surface unchanged on verify is expected behavior — VANTA generates remediation drafts,
+a human applies them, then re-runs verify to confirm closure.
 
 ---
 
